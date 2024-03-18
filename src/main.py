@@ -1,7 +1,10 @@
 import os
 import re
+import shutil
+
 from ebooklib import epub
 from typing import NoReturn
+from PIL import Image, ImageDraw, ImageFont
 
 class MultiLevelBook:
     """
@@ -100,8 +103,7 @@ class TextBookParser:
 
 
 class TxtToEpubConverter:
-    def __init__(self, txt_path: str, epub_path: str, book_title: str, author_name: str,
-                 output_folder: str = './html_chapters'):
+    def __init__(self, txt_path: str, epub_path: str, book_title: str, author_name: str, cover_image: str = None, output_folder: str = './html_chapters'):
         """
         初始化转换器实例。
 
@@ -109,13 +111,35 @@ class TxtToEpubConverter:
         :param epub_path: 输出的EPUB文件路径。
         :param book_title: 电子书标题。
         :param author_name: 作者名。
+        :param cover_image: 封面图片文件的路径。
         :param output_folder: 存放HTML章节文件的目录，默认为'./html_chapters'。
         """
         self.txt_path = txt_path
         self.epub_path = epub_path
         self.book_title = book_title
         self.author_name = author_name
+        self.cover_image = cover_image
         self.output_folder = output_folder
+
+    def generate_cover(self) -> str:
+        width, height = 600, 800
+        background_color = 'white'
+        font_size = 24
+        font_color = 'black'
+
+        image = Image.new('RGB', (width, height), background_color)
+        draw = ImageDraw.Draw(image)
+        font = ImageFont.load_default()
+
+        # Directly draw the text without calculating its size
+        text_x = width / 2  # You might need to adjust this manually to center the text
+        text_y = height / 2  # Same here
+        draw.text((text_x, text_y), self.book_title, fill=font_color, font=font, anchor="mm")
+
+        cover_path = os.path.join(self.output_folder, 'cover.jpg')
+        image.save(cover_path)
+
+        return cover_path
 
     def convert(self) -> NoReturn:
         """
@@ -136,6 +160,17 @@ class TxtToEpubConverter:
         book.set_title(self.book_title)
         book.set_language('zh-cn')
         book.add_author(self.author_name)
+
+        # 添加封面图片
+        if self.cover_image and os.path.isfile(self.cover_image):
+            # 使用提供的封面图像
+            cover_path = self.cover_image
+        else:
+            # 没有提供封面图像，生成一个
+            cover_path = self.generate_cover()
+
+        # 然后在EPUB中使用cover_path作为封面
+        book.set_cover(os.path.basename(cover_path), open(cover_path, 'rb').read())
 
         # 准备EPUB书籍的目录结构
         spine = []
