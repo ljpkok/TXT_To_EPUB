@@ -179,6 +179,28 @@ class TxtToEpubConverter:
         # 写入EPUB文件
         epub.write_epub(self.epub_path, book, {})
 
+        # 清理临时HTML文件
+        self.cleanup()
+
+    def cleanup(self) -> NoReturn:
+        """
+        清理输出目录中的所有文件。
+        """
+        # 检查目录是否存在
+        if os.path.isdir(self.output_folder):
+            # 遍历目录中的所有文件，并删除它们
+            for filename in os.listdir(self.output_folder):
+                file_path = os.path.join(self.output_folder, filename)
+                try:
+                    if os.path.isfile(file_path) or os.path.islink(file_path):
+                        os.unlink(file_path)
+                    elif os.path.isdir(file_path):
+                        shutil.rmtree(file_path)
+                except Exception as e:
+                    print('Failed to delete %s. Reason: %s' % (file_path, e))
+
+        print("Cleanup completed, temporary files removed.")
+
 
 if __name__ == '__main__':
     book_name = '陈二狗的妖孽人生'
