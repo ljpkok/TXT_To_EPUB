@@ -1,6 +1,6 @@
 import os
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLabel, QLineEdit, QFileDialog
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLabel, QLineEdit, QFileDialog, QGridLayout
 from main import TxtToEpubConverter
 
 class TxtToEpubGUI(QWidget):
@@ -14,35 +14,41 @@ class TxtToEpubGUI(QWidget):
         self.setWindowTitle('TXT to EPUB Converter')
         self.setGeometry(100, 100, 400, 300)
 
-        layout = QVBoxLayout()
+        mainLayout = QVBoxLayout()
+        formLayout = QGridLayout()
 
         self.infoLabel = QLabel('选择一个TXT文件并转换为EPUB。')
-        layout.addWidget(self.infoLabel)
+        mainLayout.addWidget(self.infoLabel)
 
         self.browseButton = QPushButton('选择TXT文件')
         self.browseButton.clicked.connect(self.browseFile)
-        layout.addWidget(self.browseButton)
+        mainLayout.addWidget(self.browseButton)
 
+        formLayout.addWidget(QLabel('书本名称：'), 0, 0)
         self.fileNameEdit = QLineEdit()
         self.fileNameEdit.setPlaceholderText('书本名称')
-        layout.addWidget(self.fileNameEdit)
+        formLayout.addWidget(self.fileNameEdit, 0, 1)
 
+        formLayout.addWidget(QLabel('作者名称：'), 1, 0)
         self.authorNameEdit = QLineEdit()
         self.authorNameEdit.setPlaceholderText('作者名称')
-        layout.addWidget(self.authorNameEdit)
+        formLayout.addWidget(self.authorNameEdit, 1, 1)
 
         self.coverButton = QPushButton('选择封面图像')
         self.coverButton.clicked.connect(self.browseCoverImage)
-        layout.addWidget(self.coverButton)
+        mainLayout.addWidget(self.coverButton)
 
         self.coverLabel = QLabel('未选择封面图像')
-        layout.addWidget(self.coverLabel)
+        mainLayout.addWidget(self.coverLabel)
 
         self.convertButton = QPushButton('转换为EPUB')
         self.convertButton.clicked.connect(self.convert)
-        layout.addWidget(self.convertButton)
+        mainLayout.addWidget(self.convertButton)
 
-        self.setLayout(layout)
+        # 将表单布局添加到主布局
+        mainLayout.addLayout(formLayout)
+
+        self.setLayout(mainLayout)
 
     def browseFile(self):
         filePath, _ = QFileDialog.getOpenFileName(self, '选择TXT文件', '', 'Text files (*.txt)')
@@ -52,7 +58,7 @@ class TxtToEpubGUI(QWidget):
             self.fileNameEdit.setText(os.path.splitext(os.path.basename(filePath))[0])
 
     def browseCoverImage(self):
-        coverImagePath, _ = QFileDialog.getOpenFileName(self, '选择封面图像', '', 'Image files (*.jpg *.jpeg *.png)')
+        coverImagePath, _ = QFileDialog.getOpenFileName(self, '选择封面图像', '', 'Image files (*.jpg *.jpeg *.png *.bmp *.gif *.tiff *.webp)')
         if coverImagePath:
             self.coverImagePath = coverImagePath
             self.coverLabel.setText(f'选择的封面图像: {os.path.basename(coverImagePath)}')

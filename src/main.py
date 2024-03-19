@@ -74,29 +74,22 @@ class TextBookParser:
         return multi_level_book
 
     @staticmethod
-    def save_chapters_as_html(multi_level_book: MultiLevelBook, output_folder: str) -> NoReturn:
+    def save_chapters_as_html(multi_level_book, output_folder: str) -> NoReturn:
         """
-        将书籍的每个章节保存为HTML文件。
+        将书籍的每个章节保存为HTML文件，使用编号来命名文件。
 
         :param multi_level_book: 包含卷和章节信息的MultiLevelBook对象。
         :param output_folder: HTML文件保存的目录。
         """
-        for volume in multi_level_book.volumes:
-            vol_title = volume['title']
-            vol_file_name = f"{vol_title}.html"
-            vol_file_path = os.path.join(output_folder, vol_file_name)
-            with open(vol_file_path, 'w', encoding='utf-8') as volume_file:
-                volume_file.write(f'<html><head><title>{vol_title}</title></head><body>\n')
-                volume_file.write(f'<h1>{vol_title}</h1>\n')
-                volume_file.write('</body></html>')
-
-            for chapter in volume['chapters']:
-                chap_title = chapter['title']
-                file_name = f"{chap_title}.html"
+        for volume_index, volume in enumerate(multi_level_book.volumes, start=1):
+            for chapter_index, chapter in enumerate(volume['chapters'], start=1):
+                # 使用编号来命名文件，格式为"001_001.html"代表第一卷第一章
+                file_name = f"{volume_index:03}_{chapter_index:03}.html"
                 file_path = os.path.join(output_folder, file_name)
+
                 with open(file_path, 'w', encoding='utf-8') as chapter_file:
-                    chapter_file.write(f'<html><head><title>{chap_title}</title></head><body>\n')
-                    chapter_file.write(f'<h1>{chap_title}</h1>\n')
+                    chapter_file.write(f'<html><head><title>{chapter["title"]}</title></head><body>\n')
+                    chapter_file.write(f'<h1>{chapter["title"]}</h1>\n')
                     for line in chapter['content']:
                         chapter_file.write(f'<p>{line}</p>\n')
                     chapter_file.write('</body></html>')
@@ -177,29 +170,37 @@ class TxtToEpubConverter:
         toc = []
 
         # 遍历书籍结构，添加卷和章节到EPUB
-        for volume in book_structure.volumes:
-            vol_title = volume['title']
-            vol_file_name = f"{vol_title}.html"
-            vol_chapter = epub.EpubHtml(title=vol_title, file_name=vol_file_name, lang='zh-cn',
-                                        content=f'<h1>{vol_title}</h1>')
+        for volume_index, volume in enumerate(book_structure.volumes, start=1):
+            # 使用编号命名卷的HTML文件
+            vol_file_name = f"{volume_index:03}.html"
+            vol_file_path = os.path.join(self.output_folder, vol_file_name)
 
+            # 创建卷的HTML内容
+            vol_title = volume['title']
+            vol_content = f'<html><head><title>{vol_title}</title></head><body>\n<h1>{vol_title}</h1>\n</body></html>'
+
+            # 创建EpubHtml对象代表卷
+            vol_chapter = epub.EpubHtml(title=vol_title, file_name=vol_file_name, lang='zh-cn', content=vol_content)
             book.add_item(vol_chapter)
             spine.append(vol_chapter)
             toc.append(epub.Section(vol_title, [vol_chapter]))
 
-            for chapter in volume['chapters']:
-                chap_title = chapter['title']
-                file_name = f"{chap_title}.html"
-                file_path = os.path.join(self.output_folder, file_name)
+            for chapter_index, chapter in enumerate(volume['chapters'], start=1):
+                # 使用编号构建章节的HTML文件名
+                chap_file_name = f"{volume_index:03}_{chapter_index:03}.html"
+                chap_file_path = os.path.join(self.output_folder, chap_file_name)
 
-                with open(file_path, 'r', encoding="utf8") as f:
+                # 读取章节内容
+                with open(chap_file_path, 'r', encoding="utf8") as f:
                     fcontent = f.read()
 
-                chapter_item = epub.EpubHtml(title=chap_title, file_name=file_name, lang='zh-cn', content=fcontent)
+                # 创建EpubHtml对象代表章节
+                chap_title = chapter['title']
+                chapter_item = epub.EpubHtml(title=chap_title, file_name=chap_file_name, lang='zh-cn', content=fcontent)
 
                 book.add_item(chapter_item)
                 spine.append(chapter_item)
-                toc.append(chapter_item)
+                toc.append(epub.Link(chap_file_name, chap_title, chap_title))
 
         # 设置EPUB书籍的导航和样式
         book.spine = ['nav'] + spine
@@ -238,14 +239,14 @@ class TxtToEpubConverter:
 
 
 if __name__ == '__main__':
-    book_name = '输入你的书名'
+    book_name = '我不是戏神'
     txt_path = f'../test_book/{book_name}.txt'
     epub_path = f'../out/{book_name}.epub'
-
+    cover_image = f'../test_book/{book_name}.webp'
     # 设置书名和作者
-    book_title = '输入你的书名'
-    author_name = '输入你的作者名'
+    book_title = '我不是戏神'
+    author_name = '三九音域'
 
-    converter = TxtToEpubConverter(txt_path, epub_path, book_title, author_name)
+    converter = TxtToEpubConverter(txt_path, epub_path, book_title, author_name, cover_image)
     converter.convert()
 
