@@ -238,13 +238,13 @@ class TxtToEpubConverter:
 
 
 if __name__ == '__main__':
-    book_name = '陈二狗的妖孽人生'
+    book_name = '输入你的书名'
     txt_path = f'../test_book/{book_name}.txt'
     epub_path = f'../out/{book_name}.epub'
 
     # 设置书名和作者
-    book_title = '陈二狗的妖孽人生'
-    author_name = '骁骑校'
+    book_title = '输入你的书名'
+    author_name = '输入你的作者名'
 
     converter = TxtToEpubConverter(txt_path, epub_path, book_title, author_name)
     converter.convert()
