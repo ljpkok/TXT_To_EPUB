@@ -1,6 +1,7 @@
 import os
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLabel, QLineEdit, QFileDialog, QGridLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLabel, QLineEdit, QFileDialog, \
+    QGridLayout, QProgressBar
 from main import TxtToEpubConverter
 
 class TxtToEpubGUI(QWidget):
@@ -19,6 +20,9 @@ class TxtToEpubGUI(QWidget):
 
         self.infoLabel = QLabel('选择一个TXT文件并转换为EPUB。')
         mainLayout.addWidget(self.infoLabel)
+
+        self.progressBar = QProgressBar(self)
+        mainLayout.addWidget(self.progressBar)
 
         self.browseButton = QPushButton('选择TXT文件')
         self.browseButton.clicked.connect(self.browseFile)
@@ -63,16 +67,24 @@ class TxtToEpubGUI(QWidget):
             self.coverImagePath = coverImagePath
             self.coverLabel.setText(f'选择的封面图像: {os.path.basename(coverImagePath)}')
 
+    def updateProgress(self, progress):
+        self.progressBar.setValue(int(progress))
+        if progress == 100:
+            self.infoLabel.setText('转换完成！')
+
     def convert(self):
         bookTitle = self.fileNameEdit.text()
         authorName = self.authorNameEdit.text()
-        if self.filePath:
-            output_path = os.path.join('..', 'out', f'{bookTitle}.epub')
-            converter = TxtToEpubConverter(self.filePath, output_path, bookTitle, authorName, self.coverImagePath)
+        if not self.filePath or not bookTitle or not authorName:
+            self.infoLabel.setText('请确保已选择TXT文件并填写书名及作者名。')
+            return
+
+        output_path = os.path.join('..', 'out', f'{bookTitle}.epub')
+        converter = TxtToEpubConverter(self.filePath, output_path, bookTitle, authorName, self.coverImagePath, progress_callback=self.updateProgress)
+        try:
             converter.convert()
-            self.infoLabel.setText('转换完成！')
-        else:
-            self.infoLabel.setText('请确保已选择TXT文件。')
+        except Exception as e:
+            self.infoLabel.setText(f'转换失败: {e}')
 
 def main():
     app = QApplication(sys.argv)

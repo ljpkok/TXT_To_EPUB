@@ -6,6 +6,7 @@ from ebooklib import epub
 from typing import NoReturn
 from PIL import Image, ImageDraw, ImageFont
 
+
 class MultiLevelBook:
     """
     MultiLevelBook 用于存储和管理一个多级目录的书籍结构，包括卷和章节。
@@ -96,7 +97,8 @@ class TextBookParser:
 
 
 class TxtToEpubConverter:
-    def __init__(self, txt_path: str, epub_path: str, book_title: str, author_name: str, cover_image: str = None, output_folder: str = './html_chapters'):
+    def __init__(self, txt_path: str, epub_path: str, book_title: str, author_name: str, cover_image: str = None,
+                 output_folder: str = './html_chapters', progress_callback=None):
         """
         初始化转换器实例。
 
@@ -113,11 +115,11 @@ class TxtToEpubConverter:
         self.author_name = author_name
         self.cover_image = cover_image
         self.output_folder = output_folder
+        self.progress_callback = progress_callback
 
     def generate_cover(self) -> str:
         width, height = 600, 800
         background_color = 'white'
-        font_size = 24
         font_color = 'black'
 
         image = Image.new('RGB', (width, height), background_color)
@@ -134,46 +136,53 @@ class TxtToEpubConverter:
 
         return cover_path
 
-    def convert(self) -> NoReturn:
-        """
-        执行TXT到EPUB的转换过程。
-        """
-        # 确保输出目录存在
+    def convert(self):
         os.makedirs(self.output_folder, exist_ok=True)
 
-        # 解析TXT文件并构建书籍结构
+        # Parse the TXT file and build the book structure
         parser = TextBookParser()
         book_structure = parser.read(self.txt_path)
 
-        # 将章节内容保存为HTML文件
+        # Progress update: after parsing (e.g., 10% completed)
+        if self.progress_callback:
+            self.progress_callback(10)
+
+        # Save chapters as HTML files
         parser.save_chapters_as_html(book_structure, self.output_folder)
 
-        # 创建EPUB书籍并设置元数据
+        # Progress update: after saving HTML files (e.g., 40% completed)
+        if self.progress_callback:
+            self.progress_callback(40)
+
+        # Create EPUB book and set metadata
         book = epub.EpubBook()
         book.set_title(self.book_title)
         book.set_language('zh-cn')
         book.add_author(self.author_name)
 
-        # 添加封面图片
+        # Add cover image
         if self.cover_image and os.path.isfile(self.cover_image):
-            # 使用提供的封面图像
             cover_path = self.cover_image
         else:
-            # 没有提供封面图像，生成一个
             cover_path = self.generate_cover()
 
-        # 然后在EPUB中使用cover_path作为封面
         book.set_cover(os.path.basename(cover_path), open(cover_path, 'rb').read())
 
-        # 准备EPUB书籍的目录结构
+        # Progress update: after setting cover (e.g., 50% completed)
+        if self.progress_callback:
+            self.progress_callback(50)
+
+        # Prepare EPUB book structure
         spine = []
         toc = []
+
+        total_chapters = sum(len(volume['chapters']) for volume in book_structure.volumes)
+        chapters_processed = 0
 
         # 遍历书籍结构，添加卷和章节到EPUB
         for volume_index, volume in enumerate(book_structure.volumes, start=1):
             # 使用编号命名卷的HTML文件
             vol_file_name = f"{volume_index:03}.html"
-            vol_file_path = os.path.join(self.output_folder, vol_file_name)
 
             # 创建卷的HTML内容
             vol_title = volume['title']
@@ -202,6 +211,13 @@ class TxtToEpubConverter:
                 spine.append(chapter_item)
                 toc.append(epub.Link(chap_file_name, chap_title, chap_title))
 
+                chapters_processed += 1
+                # Progress update: dynamically calculated based on chapters processed
+                if self.progress_callback:
+                    progress = 50 + (
+                                chapters_processed / total_chapters * 50)  # Assuming the rest 50% is for chapter processing
+                    self.progress_callback(progress)
+
         # 设置EPUB书籍的导航和样式
         book.spine = ['nav'] + spine
         book.toc = toc
@@ -214,6 +230,10 @@ class TxtToEpubConverter:
 
         # 写入EPUB文件
         epub.write_epub(self.epub_path, book, {})
+
+        # Progress update: conversion completed (100%)
+        if self.progress_callback:
+            self.progress_callback(100)
 
         # 清理临时HTML文件
         self.cleanup()
@@ -242,11 +262,10 @@ if __name__ == '__main__':
     book_name = '我不是戏神'
     txt_path = f'../test_book/{book_name}.txt'
     epub_path = f'../out/{book_name}.epub'
-    cover_image = f'../test_book/{book_name}.webp'
+    cover_image = f'../test_book/{book_name}.jpg'
     # 设置书名和作者
     book_title = '我不是戏神'
     author_name = '三九音域'
 
     converter = TxtToEpubConverter(txt_path, epub_path, book_title, author_name, cover_image)
     converter.convert()
-
